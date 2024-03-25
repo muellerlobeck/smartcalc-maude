@@ -1,6 +1,6 @@
 # Maude specs for SmartCalc
 
-## Generated Maude spec
+### Generated Maude spec
 ```
 smartcalc_gen.maude
 ```
