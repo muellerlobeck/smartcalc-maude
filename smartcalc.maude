@@ -72,7 +72,7 @@ mod SMARTCALC-CHECK is
     var i : Int .    
     var S : SysState .
     
-    ceq P([ display: d, depth: i, state: s ]) = true if ((s =/= "BeginExpr" and i == 0) implies valid(< EXPR >,d)) .
+    ceq P([ display: d, depth: i, state: s ]) = true if (((s == "HasExpr" or s == "HasNum") and i == 0) implies valid(< EXPR >,d)) .
     eq P(S) = false [owise] .
 endm
 
