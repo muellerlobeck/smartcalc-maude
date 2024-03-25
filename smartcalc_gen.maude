@@ -1,0 +1,41 @@
+*** The generated Maude spec for SmartCalc.
+
+mod SMARTCALC is
+    protecting INT .
+    protecting STRING .
+
+    rl "1" => "2" .
+    rl "1" => "3" .
+    rl "1" => "4" .
+    rl "1" => "5" .
+    rl "1" => "6" .
+    rl "1" => "7" .
+    rl "1" => "8" .
+    rl "1" => "9" .
+    rl "1" => "0" .
+
+    rl "+" => "-" .
+    rl "+" => "*" .
+    rl "+" => "/" .
+
+    sort SysState .
+
+    op [ display: _, depth: _, state: _ ] : String Int String -> SysState [ctor] .
+
+    op Init : -> SysState .
+    
+    eq Init = [ display: "", depth: 0, state: "BeginExpr" ] .
+
+    vars d p : String .
+    var i : Int .    
+
+    rl [ display: d, depth: i, state: "BeginExpr" ] => [ display: d + "(", depth: i + 1, state: "BeginExpr" ] .
+    crl [ display: d, depth: i, state: "BeginExpr" ] => [ display: d + p, depth: i, state: "HasNum" ] if "1" => p .
+    crl [ display: d, depth: i, state: "HasNum" ] => [ display: d + p, depth: i, state: "HasNum" ] if "1" => p .
+    crl [ display: d, depth: i, state: "HasNum" ] => [ display: d + p, depth: i, state: "BeginExpr" ] if "+" => p .
+    crl [ display: d, depth: i, state: "HasExpr" ] => [ display: d + p, depth: i, state: "BeginExpr" ] if "+" => p .
+    crl [ display: d, depth: i, state: "HasNum" ] => [ display: d + ")", depth: i - 1, state: "HasExpr" ] if (i > 0) .
+    crl [ display: d, depth: i, state: "HasExpr" ] => [ display: d + ")", depth: i - 1, state: "HasExpr" ] if (i > 0) .
+    crl [ display: d, depth: i, state: "HasNum" ] => [ display: "", depth: 0, state: "BeginExpr" ] if (i == 0) .
+    crl [ display: d, depth: i, state: "HasExpr" ] => [ display: "", depth: 0, state: "BeginExpr" ] if (i == 0) .
+endm

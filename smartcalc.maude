@@ -1,0 +1,79 @@
+*** The state space reduced version of the Maude spec for SmartCalc.
+*** 
+*** 1. The meta-rules for generating the parameter values for parameter sets Digit and Operator are commented out.
+***    Hence, only digits "1" and operators "+" will be considered.
+*** 2. The rule for the self-transition of state HasNum is commented out.
+***    Hence, only single-digit numerical operands will be considered.
+*** 
+*** Use the following command with N set to a search depth of your choice (anything > 20 takes probably very long time) to check the invariant:
+*** search [,N] Init =>* S such that not P(S) .
+
+load parser.maude .
+
+mod SMARTCALC is
+    protecting INT .
+    protecting STRING .
+
+***(
+    rl "1" => "2" .
+    rl "1" => "3" .
+    rl "1" => "4" .
+    rl "1" => "5" .
+    rl "1" => "6" .
+    rl "1" => "7" .
+    rl "1" => "8" .
+    rl "1" => "9" .
+    rl "1" => "0" .
+
+    rl "+" => "-" .
+    rl "+" => "*" .
+    rl "+" => "/" .
+)***
+
+    sort SysState .
+
+    op [ display: _, depth: _, state: _ ] : String Int String -> SysState [ctor] .
+
+    op Init : -> SysState .
+    
+    eq Init = [ display: "", depth: 0, state: "BeginExpr" ] .
+
+    vars d p : String .
+    var i : Int .    
+    
+    rl [ display: d, depth: i, state: "BeginExpr" ] => [ display: d + "(", depth: i + 1, state: "BeginExpr" ] .
+    crl [ display: d, depth: i, state: "BeginExpr" ] => [ display: d + p, depth: i, state: "HasNum" ] if "1" => p .
+***    crl [ display: d, depth: i, state: "HasNum" ] => [ display: d + p, depth: i, state: "HasNum" ] if "1" => p .
+    crl [ display: d, depth: i, state: "HasNum" ] => [ display: d + p, depth: i, state: "BeginExpr" ] if "+" => p .
+    crl [ display: d, depth: i, state: "HasExpr" ] => [ display: d + p, depth: i, state: "BeginExpr" ] if "+" => p .
+    crl [ display: d, depth: i, state: "HasNum" ] => [ display: d + ")", depth: i - 1, state: "HasExpr" ] if (i > 0) .
+    crl [ display: d, depth: i, state: "HasExpr" ] => [ display: d + ")", depth: i - 1, state: "HasExpr" ] if (i > 0) .
+    crl [ display: d, depth: i, state: "HasNum" ] => [ display: "", depth: 0, state: "BeginExpr" ] if (i == 0) .
+    crl [ display: d, depth: i, state: "HasExpr" ] => [ display: "", depth: 0, state: "BeginExpr" ] if (i == 0) .
+endm
+
+mod SMARTCALC-CHECK is
+    protecting SMARTCALC .
+    protecting PARSER .
+
+    op DIGIT : -> ParserDef [ctor] .
+    op NUMBER : -> ParserDef [ctor] .
+    op OPERATOR : -> ParserDef [ctor] .
+    op EXPR : -> ParserDef [ctor] .
+
+    eq parsedef(DIGIT) = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" .
+    eq parsedef(NUMBER) = < DIGIT > [ < NUMBER > ] .
+    eq parsedef(OPERATOR) = "+" | "-" | "*" | "/" .
+    eq parsedef(EXPR) = {< NUMBER > | "(" < EXPR > ")"} [ < OPERATOR > < EXPR > ] .
+    
+    op P : SysState -> Bool .
+
+    vars d s : String .
+    var i : Int .    
+    var S : SysState .
+    
+    ceq P([ display: d, depth: i, state: s ]) = true if ((s =/= "BeginExpr" and i == 0) implies valid(< EXPR >,d)) .
+    eq P(S) = false [owise] .
+endm
+
+

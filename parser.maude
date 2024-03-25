@@ -1,0 +1,72 @@
+*** Helper module for parsing BNF expressions.
+
+*** IMPORTANT NOTE:
+***    We use a "first good choice wins" strategy. That is, when parsing a choice
+***        X_1 | ... | X_n
+***    then parsing terminates for the minimal i with X_i successfully parsed.
+*** 
+***    This differs from the BNF logic, where the parsing result is the longest successful X_i.
+*** 
+***    Therefore, our module may give unexpected results, namely when using X | Y where X accepts
+***    a proper prefix of a string accepted by Y.
+*** 
+***    So while their BNF analogue is allowed, you should not use constructions like
+***        eq parsedef(NUMBER) = < DIGIT > | < DIGIT > < NUMBER > .
+***    One way of fixing this definition is reordering:
+***        eq parsedef(NUMBER) = < DIGIT > < NUMBER > | < DIGIT > .
+***    For the given example (and similar constructions), another possible fix is
+***    to isolate the prefix:
+***        eq parsedef(NUMBER) = < DIGIT > [ < NUMBER > ] .
+*** 
+
+fmod PARSER is
+    protecting BOOL .
+    protecting INT .
+    protecting STRING .
+
+    sorts ParserDef ParserAtom ParserSeq ParserExpr .
+    subsorts String < ParserAtom < ParserSeq < ParserExpr .
+
+    op _ _ : ParserAtom ParserSeq -> ParserSeq [ctor prec 100] .
+
+    op _|_ : ParserSeq ParserExpr -> ParserExpr [ctor prec 101] .
+
+    op {_} : ParserExpr -> ParserAtom [ctor] .
+
+    op [_] : ParserExpr -> ParserAtom [ctor] .
+
+    op <_> : ParserDef -> ParserAtom [ctor] .
+
+    op parsedef(_) : ParserDef -> ParserExpr .
+
+    var s t : String .
+    var n : Nat .
+    var r : Int .
+    var def : ParserDef .
+    var atom : ParserAtom .
+    var seq : ParserSeq .
+    var expr : ParserExpr .
+
+*** The token parsing function, having parameters
+***     - ParseExpr:   the expression to be parsed
+***     - String:      the string to undergo parsing
+***     - Nat:         the offset where parsing should start
+*** It returns an integer r, having the following meaning:
+***     - r >= 0: The given expression could be completely parsed up to offset r.
+***     - r = -1: The given expression could not be parsed.
+    op parse(_,_,_) : ParserExpr String Nat -> Int .
+
+    eq parse("",s,n) = n .
+    eq parse(t,s,n) = if (substr(s,n,1) == substr(t,0,1)) then parse(substr(t,1,length(t) - 1),s,n + 1) else -1 fi [owise] .
+    eq parse({ expr },s,n) = parse(expr,s,n) .
+    eq parse([ expr ],s,n) = max(n,parse(expr,s,n)) .
+    eq parse(< def >,s,n) = parse({ parsedef(def) },s,n) .
+    ceq parse(atom seq,s,n) = (if (r < 0) then r else parse(seq,s,r) fi) if r := parse(atom,s,n) .
+    ceq parse(seq | expr,s,n) = (if (r >= 0) then r else parse(expr,s,n) fi) if r := parse(seq,s,n) .
+
+*** The validation function for checking if a string as a whole matches an expression.
+    op valid(_,_) : ParserExpr String -> Bool .
+
+    eq valid(expr,s) = (parse(expr,s,0) == length(s)) .
+endfm
+
